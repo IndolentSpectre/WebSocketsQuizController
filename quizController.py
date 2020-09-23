@@ -3,7 +3,7 @@
 # Web Streams quiz controller            #
 # By: Chris Noble                        #
 # Date: 19-Aug-2020                      #
-# Revision Invormation                   #
+# Revision Information                   #
 # 05-Sep-2020 first working version      #
 ##########################################
 
