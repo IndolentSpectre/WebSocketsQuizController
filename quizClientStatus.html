@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Quiz Controller Status Client</title>
+<meta name="description" content="quizController Status Page">
+<meta name="author" content="Chris Noble">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<base href="https://DockLeafTechnology.Co.UK/" target="_blank">
+
+<style>
+ body {background-color: powderblue;}
+.buttons {
+  text-align: center;
+  text-decoration: none;
+  height: 100%;
+  width: 100%;
+  font-size: 40px;
+}
+
+.inputbox {
+  border: 12px solid red;
+  background-color: #EB7575;
+  color: black;
+  font-size: 250%;
+  width: 50%;
+  height: 10%;
+}
+
+.inputbox1 {
+  font-size: 350%;
+  text-align: center;
+  width: 85%;
+  height: 30%;
+}
+
+.Btable {
+ border: None;
+}
+</style>
+</head>
+
+<body>
+<center>
+<H2 style="font-size:300%; text-decoration: underline overline;">Quiz Controller Status</H1>
+<br><br>
+
+  <table class="Btable"><tr><td><button id="resetButton" name="resetButton" class="buttons" style="visibility: hidden;">RESET</button></td>
+  <td>  </td>
+  <td><button id="statusButton" name="statusButton" class="buttons" style="visibility: hidden;">STATUS</button></td></tr></table>
+  <br><br>
+  <table>
+  <tr>
+  <td><h2>Play Status</h2></td><td><input type="text" id="statusBox" name="statusBox" class="inputbox inputbox1" value="CONNECTING..."> </td>
+<br><br>
+</tr>
+<tr>
+  <td><h2>Fastest Player</h2></td><td><input type="text" id="playBox" name="playBox" class="inputbox inputbox1" placeholder="Fastest User"> </td>
+</tr>
+</table>
+</center>
+<table id="statusTable" name="statusTable">
+<tr><th>User</th><th>IP Address</th><th>UserTime</th></tr>
+</table>
+
+
+  <script type="text/javascript">
+    var ws = new WebSocket("ws://rp-development41:9107/quizController/status");
+    var pb = document.getElementById("playBox");
+    var ps = document.getElementById("statusBox");
+    var pt = document.getElementById("statusTable");
+    var rb = document.getElementById("resetButton");
+    var sb = document.getElementById("statusButton");
+
+    var intervalTime = 2000;
+
+    // Listen for possible errors
+    ws.addEventListener('error', function (error) {
+      ps.value = 'Connection refused';
+      intervalTime = 999000;
+      //console.log('WebSocket error: ', event);
+    });
+
+    // Listen for open event
+    ws.addEventListener('open', function (event) {
+      intervalTime = 2000;
+      //console.log('WebSocket open: ', event);
+    });
+
+      //console.debug("OPEN connection state");
+
+      rb.onclick = function() {
+         msg = {msgtype: "reset"};
+         ws.send(JSON.stringify(msg));
+         ps.value = 'UnLocked';
+      };
+
+      sb.onclick = function() {
+         msg = {msgtype: "status"};
+         ws.send(JSON.stringify(msg));
+      };
+
+      setInterval(function(){
+        if (ws.readyState == 1) {
+          rb.style.visibility = 'visible';
+          sb.style.visibility = 'visible';
+          msg = {msgtype: "status"};
+          ws.send(JSON.stringify(msg)); }
+        else {
+          rb.style.visibility = 'hidden';
+          sb.style.visibility = 'hidden';
+          ps.value = 'NOT CONNECTED';
+          };}, intervalTime);
+
+
+      ws.onmessage = function (evt) {
+        switch (evt.data) {
+        case "Locked":
+        case "UnLocked":
+          ps.value = evt.data;
+          break;
+        default:
+          var jmsg = JSON.parse(evt.data);
+          while(pt.rows.length > 1) {
+            pt.deleteRow(1);
+          };
+
+          var lValue = 9*10**16;
+          var lUser = 'None';
+
+          for (var key in jmsg) {
+            var row = pt.insertRow(1);
+            var cell0 = row.insertCell(0);
+            var cell1 = row.insertCell(1);
+            var cell2 = row.insertCell(2);
+            cell0.innerHTML = key;
+            cell1.innerHTML = jmsg[key].UserIP;
+            cell2.innerHTML = jmsg[key].UserTime;
+            if (jmsg[key].UserTime < lValue) {
+              lValue = jmsg[key].UserTime;
+              lUser = key;
+            };
+           };
+         pb.value = lUser;
+         };
+       };
+
+  </script>
+</body>
+<footer>
+    <p>© 2020 DockLeaf Technology</p>
+</footer>
+</html>
+

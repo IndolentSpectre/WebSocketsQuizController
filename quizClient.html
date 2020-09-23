@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Quiz Controller Client</title>
+<meta name="description" content="quizController Client Page">
+<meta name="author" content="Chris Noble">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="rdate" content="05-Sep-2020">
+<base href="https://DockLeafTechnology.Co.UK/" target="_blank">
+<style>
+  body {background-color: powderblue;}
+
+.content {
+  text-align: center;
+  font-family: "Avantgarde", "Helvetica", "Arial", "sans-serif";
+  font-style: normal;
+}
+
+.buttons {
+  border: none;
+  color: white;
+  padding: 15px 32px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 56px;
+  margin: 4px 2px;
+  cursor: pointer;
+  border-radius: 50%;
+}
+
+.button1 {background-color: #4CAF50;
+          transition-duration: 0.5s;}
+.button1:hover {box-shadow: 0 12px 16px 0 rgba(0,0,0,0.24),
+                  0 17px 50px 0 rgba(0,0,0,0.19);} /* Green */
+.button1:active {
+  transform: translateY(14px);
+}
+.button2:active {
+  transform: translateY(14px);
+}
+
+.button2 {background-color: #008CBA;
+  font-size: 250px;
+  width: 70%;
+  height: 70%;} /* Blue */
+
+.inputbox {
+  border: 12px solid red;
+  background-color: #EB7575;
+  color: black;
+  font-size: 250%;
+  width: 50%;
+  height: 10%;
+}
+
+.inputbox1 {
+  font-size: 350%;
+  text-align: center;
+  width: 85%;
+  height: 30%;
+}
+
+</style>
+</head>
+<body>
+<div class="content">
+<H2 style="font-size:300%; text-decoration: underline overline;">Quiz Controller</H1>
+<br><br>
+
+  <input type="text" id="uname" name="uname" class="inputbox" placeholder="Enter a username"> 
+  <button id="loginButton" class="buttons button1" disabled >Login</button>
+
+  <br><br>
+  <button id="playButton" class="buttons button2" disabled style="visibility: hidden;">Play</button>
+  <br><br>
+  <input type="text" id="playTime" name="playTime" class="inputbox inputbox1" placeholder="Play time display" disabled style="visibility: hidden;"> 
+</center>
+
+  <script type="text/javascript">
+    var U = 'Chris';
+    var P = 'ChrisPassword';
+    var LI = 0; // Logged-in = 1
+    var ws = new WebSocket("ws://rp-development41:9107/quizController");
+    var un = document.getElementById("uname");
+    var pt = document.getElementById("playTime");
+    var lb = document.getElementById("loginButton");
+    var pb = document.getElementById("playButton");
+
+    var buttonNumber = 0;
+    var intervalTime = 250;
+
+    lb.onclick = function() {loginFunction()};
+    pb.onclick = function() {playFunction()};
+    un.oninput = function() {allowLogin()};
+
+    ws.onopen = function() {
+        msg = {msgtype: "connect"};
+        ws.send(JSON.stringify(msg));
+    };
+
+    // Logoff before unloading
+    window.onbeforeunload = function() {
+      if (ws.readyState == WebSocket.OPEN && LI == 1) {
+         var msg = {
+           msgtype: 'logout',
+           username: U,
+           password: P,
+           usertime: T
+           };
+         ws.send(JSON.stringify(msg))};
+         ws.close();
+         //return("Window closing");
+    };
+
+    // Listen for possible errors
+    ws.addEventListener('error', function (error) {
+      un.value = 'Connection refused';
+      intervalTime = 999000;
+      //console.log('WebSocket error: ', event);
+    });
+
+    setInterval(function(){
+      //console.log("INTERVAL function running");
+      if (ws.readyState != WebSocket.OPEN) {
+        if (LI == 1) {
+          loginFunction();
+        }
+      }
+      else if (LI == 1) {
+        //console.log("STATUS request");
+        msg = {msgtype: "status"};
+        ws.send(JSON.stringify(msg));
+       };}, intervalTime);
+
+
+    ws.onmessage = function (evt) {
+        //console.debug("onmessage: ", evt)
+        if (evt.data == "ping") {
+          msg = {msgtype: "pong"};
+          ws.send(JSON.stringify(msg));
+        }
+        else if (evt.data == "locked") {
+          //console.log("Lock received");
+          pb.disabled = true;
+          pb.style.opacity = 0.2;
+        }
+        else if (evt.data == "unlocked") {
+          //console.log("Unlock received");
+          pb.disabled = false;
+          pb.style.opacity = 1;
+          pt.value = '';
+        }
+        else {
+          if (buttonNumber == 1) {
+            pb.disabled = false;
+            lb.innerHTML = evt.data;}
+          else {
+            pt.value = evt.data;}
+            };
+         };
+
+    // Login button
+    function loginFunction() {
+      if (ws.readyState == WebSocket.OPEN) {
+       buttonNumber = 1;
+       if (LI == 0) {
+         var d = new Date();
+         T = d.getTime();
+         U = un.value;
+         var msg = {
+           msgtype: 'login',
+           username: U,
+           password: P,
+           usertime: T
+           };
+         ws.send(JSON.stringify(msg));
+         LI = 1;
+         lb.disabled = false;
+         pb.style.visibility = "visible";
+         pb.disabled = false;
+         un.disabled = true;
+         pt.style.visibility = "visible";
+         }
+       else {
+         var d = new Date();
+         T = d.getTime();
+         U = un.value;
+         var msg = {
+           msgtype: 'logout',
+           username: U,
+           password: P,
+           usertime: T
+           };
+         if (ws.readyState == WebSocket.OPEN) {
+           ws.send(JSON.stringify(msg))};
+
+         lb.innerHTML = 'Login';
+         LI = 0;
+         un.value = '';
+         un.disabled = false;
+         pt.value = '';
+         pb.style.visibility = "hidden";
+         pb.disabled = true;
+         lb.disabled = true;
+         pt.style.visibility = "hidden";
+         };
+       };
+       //else {
+         //ws = new WebSocket("ws://rp-development41:9107/quizController");
+       //};
+      };
+
+    // Play button
+    function playFunction() {
+       //console.log("Play button pressed");
+       buttonNumber = 2;
+       var d = new Date();
+       T = d.getTime();
+       var msg = {
+         msgtype: 'play',
+         username: U,
+         password: P,
+         usertime: T
+         };
+       if (ws.readyState == WebSocket.OPEN) {
+         ws.send(JSON.stringify(msg))};
+    };
+
+    // Allow login
+    function allowLogin() {
+      if (un.value != '') {
+        lb.disabled = false;
+        }
+      else {
+        lb.disabled = true;
+        };
+      };
+
+  </script>
+</div>
+</body>
+<footer>
+    <p>© 2020 DockLeaf Technology</p>
+</footer>
+</html>
+
